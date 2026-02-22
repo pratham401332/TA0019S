@@ -28,6 +28,16 @@ const initDatabase = async () => {
 };
 
 // 2. ROUTES
+// Add this in the ROUTES section of server.js
+app.get('/api/alumni', async (req, res) => {
+    try {
+        // This pulls from your TiDB database
+        const [rows] = await db.query('SELECT * FROM students WHERE role = "alumni"'); 
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.get('/status', async (req, res) => {
     try {
         const [rows] = await db.query('SELECT "Connected" AS status');

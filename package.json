@@ -1,10 +1,12 @@
 {
-  "name": "eligix-backend",
+  "name": "shopai",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "server-ecommerce.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node server-ecommerce.js",
+    "dev": "node server-ecommerce.js",
+    "build": "cd client && npm install && npm run build",
+    "start:full": "npm run build && node server-ecommerce.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

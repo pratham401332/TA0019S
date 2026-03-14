@@ -1,4 +1,6 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const cors = require('cors'); 
 const db = require('./db');
 require('dotenv').config();
@@ -8,6 +10,22 @@ const app = express();
 // MIDDLEWARE
 app.use(cors()); 
 app.use(express.json());
+
+// Serve frontend: prefer built `client/dist` if present, otherwise serve `client/` (legacy)
+const clientDist = path.join(__dirname, 'client', 'dist');
+if (fs.existsSync(clientDist)) {
+    app.use(express.static(clientDist));
+    // Fallback to index.html for SPA routes (only for GET requests asking HTML)
+    app.use((req, res, next) => {
+        if (req.method !== 'GET') return next();
+        const accept = req.headers.accept || '';
+        if (!accept.includes('text/html')) return next();
+        res.sendFile(path.join(clientDist, 'index.html'));
+    });
+} else {
+    app.use(express.static(path.join(__dirname, 'client')));
+    app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'client', 'index.html')));
+}
 
 // 1. AUTOMATED DATABASE SETUP
 const initDatabase = async () => {
@@ -30,7 +48,7 @@ const initDatabase = async () => {
 // 2. ROUTES
 app.get('/status', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT "Connected" AS status');
+        const [rows] = await db.query("SELECT 'Connected' AS status");
         res.json({ message: "ELIGIX Backend is Live!", db_status: rows[0].status });
     } catch (err) {
         res.status(500).json({ error: "Backend Live, but DB issue: " + err.message });
@@ -47,6 +65,17 @@ app.get('/test-db', async (req, res) => {
 });
 
 // --- ADDED NEW ROUTES HERE ---
+
+// ShopAI: products API (no DB required)
+app.get('/api/products', (req, res) => {
+  try {
+    const data = require('./data/products');
+    const list = Array.isArray(data?.products) ? data.products : [];
+    return res.json(list.length ? list : [{ id: 1, name: 'Sample Product', category: 'Electronics', price: 99, rating: 4.5, reviewCount: 0, image: 'https://via.placeholder.com/300', description: 'Demo' }]);
+  } catch (e) {
+    return res.json([{ id: 1, name: 'Demo Product', category: 'Electronics', price: 99, rating: 4.5, reviewCount: 0, image: 'https://via.placeholder.com/300', description: 'Demo' }]);
+  }
+});
 
 // Route to get all registered students
 app.get('/api/students', async (req, res) => {
@@ -80,3 +109,5 @@ app.listen(PORT, async () => {
     console.log(`🚀 ELIGIX Server running on port ${PORT}`);
     await initDatabase(); 
 });
+
+// (Serving handled above depending on build presence)
